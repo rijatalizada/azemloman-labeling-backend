@@ -1,21 +1,16 @@
-import express, { Express, Request, Response } from "express";
+import express, { Application } from "express";
 import dotenv from "dotenv";
-import AWS from 'aws-sdk';
+import s3Routes from "./router/s3Routes";
+
 dotenv.config();
 
-const app: Express = express();
-const port = process.env.PORT || 3000;
+const app: Application = express();
+const PORT = process.env.PORT || 3000;
 
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION, 
-});
+app.use(express.json());
 
-app.get("/", (req: Request, res: Response) => {
-  res.send("Express + TypeScript Server");
-});
+app.use("/s3", s3Routes);
 
-app.listen(port, () => {
-  console.log(`[server]: Server is running at http://localhost:${port}`);
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
