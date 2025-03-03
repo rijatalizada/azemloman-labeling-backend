@@ -11,7 +11,6 @@ const BUCKET_NAME = "songs2-cropped";
 let cachedKeys: string[] = [];
 let lastCacheRefresh: number | null = null;
 
-
 const fetchAllKeys = async (): Promise<string[]> => {
   const keys: string[] = [];
   let continuationToken: string | undefined;
@@ -35,7 +34,6 @@ const fetchAllKeys = async (): Promise<string[]> => {
   return keys;
 };
 
-
 const ensureCacheIsFresh = async (): Promise<void> => {
   const TEN_MINUTES = 10 * 60 * 1000;
 
@@ -48,7 +46,6 @@ const ensureCacheIsFresh = async (): Promise<void> => {
 export const getRandomObject = async (): Promise<any> => {
   await ensureCacheIsFresh();
 
-  // Select a random key
   const randomIndex = Math.floor(Math.random() * cachedKeys.length);
   const randomKey = cachedKeys[randomIndex];
 
@@ -56,36 +53,37 @@ export const getRandomObject = async (): Promise<any> => {
     return {
       fileId: randomKey.split("/")[0],
       fileName: randomKey.split("/")[1],
-      url: `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${randomKey}`,
     };
   } catch (error: any) {
     throw new Error(`Failed to generate pre-signed URL: ${error.message}`);
   }
 };
 
-// export const getRandomObject = async (): Promise<any> => {
-//   await ensureCacheIsFresh();
+export async function streamSong(songId: string) {
+  try {
+    const listParams = {
+      Bucket: BUCKET_NAME,
+      Prefix: songId
+    };
+    
+    const listResult = await s3.listObjectsV2(listParams).promise();
+    const matchingFile = listResult.Contents?.[0];
+    
+    if (!matchingFile?.Key) {
+      throw new Error(`No files found with prefix: ${songId}`);
+    }
 
-//   // Select a random key
-//   const randomIndex = Math.floor(Math.random() * cachedKeys.length);
-//   const randomKey = cachedKeys[randomIndex];
+    const params = {
+      Bucket: BUCKET_NAME,
+      Key: matchingFile.Key, 
+    };
 
-//   // Fetch the object details
-//   const params = {
-//     Bucket: BUCKET_NAME,
-//     Key: randomKey,
-//   };
-
-//   try {
-//     const data = await s3.getObject(params).promise();
-//     return {
-//       fileName: randomKey,
-//       contentType: data.ContentType,
-//       size: data.ContentLength,
-//       lastModified: data.LastModified,
-//       url: `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${randomKey}`,
-//     };
-//   } catch (error: any) {
-//     throw new Error(`Failed to retrieve object: ${error.message}`);
-//   }
-// };
+    console.log('Fetching file:', matchingFile.Key);
+    
+    const s3Object = s3.getObject(params)
+    return s3Object.createReadStream();
+  } catch (error: any) {
+    console.error("Error fetching song from S3:", error.message);
+    throw new Error(`Song not found or could not be retrieved. Key: ${songId}`);
+  }
+}

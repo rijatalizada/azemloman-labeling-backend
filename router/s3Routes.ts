@@ -1,9 +1,10 @@
 import { Router } from "express";
-import { getRandomFile } from "../controller/s3Controller";
+import { getRandomFile, getSongStream } from "../controller/s3Controller";
 
 const router = Router();
 
-// Route to get a random file
 router.get("/random-file", getRandomFile);
+router.get("/stream/:id", getSongStream);
+
 
 export default router;
